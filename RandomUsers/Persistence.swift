@@ -103,7 +103,8 @@ class PersistenceController {
 
 
     final func updateAvatar(forUser user: User, completionHandler: @escaping () -> Void) {
-        let trueRandomUser = RandomUser()
+        var trueRandomUser = RandomUser()
+        trueRandomUser.address.country = user.country!
 
         updateAvatarSubscriber = avatarPublisher(with: trueRandomUser)
             .sink(receiveCompletion: { completion in
@@ -115,7 +116,9 @@ class PersistenceController {
                 }
             }, receiveValue: { randomUser in
                 self.container.performBackgroundTask { backgroundContext in
-                    user.avatar = randomUser.avatar
+                    // Get a `User` instance from proper context!!!
+                    let usr = backgroundContext.object(with: user.objectID) as! User
+                    usr.avatar = randomUser.avatar
 
                     do {
                         try backgroundContext.save()
@@ -198,7 +201,7 @@ private struct RandomUser: Decodable {
     let firstName: String
     let lastName: String
     let username: String
-    let address: Address
+    var address: Address
     let phoneNumber: String
     let creditCard: CreditCard
     let subscription: Subscription
@@ -218,7 +221,7 @@ private struct RandomUser: Decodable {
 
 
 private struct Address: Decodable {
-    let country: String
+    var country: String
 }
 
 

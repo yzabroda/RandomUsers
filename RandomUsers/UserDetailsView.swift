@@ -32,6 +32,10 @@ struct UserDetailsView: View {
             Text("Credid Card: \(user.creditCard!)")
             Text("Payment Method: \(user.paymentMethod!)")
         }
+        .navigationTitle(user.username!)
+        .onAppear {
+            self.image = user.avatarImage
+        }
     }
 
     @State private var image = Image(systemName: "lasso")
