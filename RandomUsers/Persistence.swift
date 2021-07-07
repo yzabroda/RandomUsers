@@ -108,6 +108,7 @@ class PersistenceController {
     }
 
 
+    @MainActor
     final func updateAvatar(forUser user: User) async {
         do {
             let avatar = try await avatar(forCountry: user.country!)
