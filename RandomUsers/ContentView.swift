@@ -16,7 +16,7 @@ struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \User.username, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \User.timestamp, ascending: true)],
         animation: .default)
     private var users: FetchedResults<User>
 
@@ -29,7 +29,7 @@ struct ContentView: View {
                             user.avatarImage
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(height: 44)
+                                .frame(height: rowHeight)
                             Text(user.username!)
                         }
                     }
@@ -69,6 +69,9 @@ struct ContentView: View {
             }
         }
     }
+
+
+    private let rowHeight: CGFloat = 44
 }
 
 

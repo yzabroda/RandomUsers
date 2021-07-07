@@ -91,6 +91,7 @@ class PersistenceController {
                     newUser.creditCard = randomUser.creditCard.number
                     newUser.phoneNumber = randomUser.phoneNumber
                     newUser.avatar = randomUser.avatar
+                    newUser.timestamp = Date()
 
                     do {
                         try backgroundContext.save()

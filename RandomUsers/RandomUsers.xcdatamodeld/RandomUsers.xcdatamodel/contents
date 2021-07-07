@@ -8,9 +8,10 @@
         <attribute name="lastName" optional="YES" attributeType="String"/>
         <attribute name="paymentMethod" optional="YES" attributeType="String"/>
         <attribute name="phoneNumber" optional="YES" attributeType="String"/>
+        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="username" attributeType="String" defaultValueString=""/>
     </entity>
     <elements>
-        <element name="User" positionX="-63" positionY="-18" width="128" height="149"/>
+        <element name="User" positionX="-63" positionY="-18" width="128" height="164"/>
     </elements>
 </model>
