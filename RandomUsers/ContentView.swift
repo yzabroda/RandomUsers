@@ -11,7 +11,14 @@ import CoreData
 
 
 
+/**
 
+ Represents "master" view which contains a table with rows
+ (containing user's country avatar and username) and a "+" button.
+
+ Tapping the "+" button will create a new user and add them to the list.
+
+ */
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -36,7 +43,7 @@ struct ContentView: View {
                 }
                 .onDelete(perform: deleteItems)
             }
-            .listStyle(SidebarListStyle())
+            .listStyle(SidebarListStyle())  // Supporting modern "sidebar" UI on iPad.
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: addItem) {
@@ -86,6 +93,10 @@ struct ContentView_Previews: PreviewProvider {
 
 extension User {
 
+    /**
+     Converts raw `Data` representation of avatar image
+     into SwiftUI `Image`.
+     */
     var avatarImage: Image {
         guard let avatar = avatar else {
             return Image(systemName: "lasso")

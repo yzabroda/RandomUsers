@@ -12,6 +12,14 @@ import os.log
 
 
 
+/**
+
+ Represents a "backend" / "model" part of the "RandomUsers" app.
+
+ Responsible for obtaining random users from predefined backend,
+ parsing them and storing into a local Core Data subsystem.
+
+ */
 class PersistenceController {
 
     static var shared = PersistenceController()
@@ -67,6 +75,11 @@ class PersistenceController {
     }
 
 
+    /**
+     Fetches a single random user from "main" backend, then fetches a random
+     avatar from another, dedicated backend, and finally stores fetched user's data
+     into a local Core Data subsystem.
+     */
     final func fetchRandomUser() {
         randomUserSubscriber = randomUserPublisher
             .flatMap { randomUser in
@@ -103,6 +116,15 @@ class PersistenceController {
     }
 
 
+    /**
+
+     Updates avatar image for a given `User` and informs when ready.
+
+     - Parameters:
+       - user: A `User` whose avatar needs to be changed to a new one.
+       - completionHandler: Will be called upon successful avatar change on main GCD queue.
+
+     */
     final func updateAvatar(forUser user: User, completionHandler: @escaping () -> Void) {
         var trueRandomUser = RandomUser()
         trueRandomUser.address.country = user.country!
@@ -187,8 +209,19 @@ class PersistenceController {
 
 
 
+/**
 
+ Represents a random user as returned by backend.
+ The structure is a trimmed version of the one described
+ in original server-side JSON.
+
+ */
 private struct RandomUser: Decodable {
+
+    /**
+     A default initializer. Used exclusively as a "helper" when updating
+     existing user's avatar.
+     */
     init() {
         firstName = ""
         lastName = ""
@@ -246,6 +279,12 @@ private struct Subscription: Decodable {
 
 
 
+/**
+
+ Represents possible  backend-side errors, like response in unexpected format
+ or a specific error like "500 Internal Server Error".
+
+ */
 private enum ServerSideError {
     case nonHTTPResponse
     case httpServerError(Int)

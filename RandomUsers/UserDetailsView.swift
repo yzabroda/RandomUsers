@@ -10,6 +10,14 @@ import SwiftUI
 
 
 
+/**
+
+ Represents "detail" view which displays the users country avatar, first name, last name, phone number,
+ credit card number, and payment method.
+
+ Also contains a button to change the avatar by requesting a new image.
+
+ */
 struct UserDetailsView: View {
     let user: User
 
