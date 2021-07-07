@@ -5,7 +5,6 @@
 //  Created by Yuriy Zabroda on 07.07.2021.
 //
 
-import Combine
 import CoreData
 import os.log
 
@@ -67,71 +66,83 @@ class PersistenceController {
     }
 
 
-    final func fetchRandomUser() {
-        randomUserSubscriber = randomUserPublisher
-            .flatMap { randomUser in
-                return self.avatarPublisher(with: randomUser)
+    final func fetchRandomUser() async {
+        do {
+            let (data, response) = try await theURLSession.data(from: Self.randomUserURL)
+
+            guard let response = response as? HTTPURLResponse else {
+                throw ServerSideError.nonHTTPResponse
             }
-            .sink(receiveCompletion: { completion in
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
+
+            guard (200...299).contains(response.statusCode) else {
+                throw ServerSideError.httpServerError(response.statusCode)
+            }
+
+            let randomUser = try JSONDecoder().decode(RandomUser.self, from: data)
+            let avatar = try await avatar(forCountry: randomUser.address.country)
+
+            await container.performBackgroundTask { backgroundContext in
+                let newUser = User(context: backgroundContext)
+
+                newUser.username = randomUser.username
+                newUser.firstName = randomUser.firstName
+                newUser.lastName = randomUser.lastName
+                newUser.country = randomUser.address.country
+                newUser.paymentMethod = randomUser.subscription.paymentMethod
+                newUser.creditCard = randomUser.creditCard.number
+                newUser.phoneNumber = randomUser.phoneNumber
+                newUser.avatar = avatar
+                newUser.timestamp = Date()
+
+                do {
+                    try backgroundContext.save()
+                } catch {
                     os_log("%{public}@", error.localizedDescription)
                 }
-            }, receiveValue: { randomUser in
-                self.container.performBackgroundTask { backgroundContext in
-                    let newUser = User(context: backgroundContext)
+            }
+        } catch {
+            os_log("%{public}@", error.localizedDescription)
 
-                    newUser.username = randomUser.username
-                    newUser.firstName = randomUser.firstName
-                    newUser.lastName = randomUser.lastName
-                    newUser.country = randomUser.address.country
-                    newUser.paymentMethod = randomUser.subscription.paymentMethod
-                    newUser.creditCard = randomUser.creditCard.number
-                    newUser.phoneNumber = randomUser.phoneNumber
-                    newUser.avatar = randomUser.avatar
-                    newUser.timestamp = Date()
-
-                    do {
-                        try backgroundContext.save()
-                    } catch {
-                        os_log("%{public}@", error.localizedDescription)
-                    }
-                }
-            })
+            return
+        }
     }
 
 
-    final func updateAvatar(forUser user: User, completionHandler: @escaping () -> Void) {
-        var trueRandomUser = RandomUser()
-        trueRandomUser.address.country = user.country!
+    final func updateAvatar(forUser user: User) async {
+        do {
+            let avatar = try await avatar(forCountry: user.country!)
 
-        updateAvatarSubscriber = avatarPublisher(with: trueRandomUser)
-            .sink(receiveCompletion: { completion in
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
+            await container.performBackgroundTask { backgroundContext in
+                // Get a `User` instance from proper context!!!
+                let usr = backgroundContext.object(with: user.objectID) as! User
+                usr.avatar = avatar
+
+                do {
+                    try backgroundContext.save()
+                } catch {
                     os_log("%{public}@", error.localizedDescription)
                 }
-            }, receiveValue: { randomUser in
-                self.container.performBackgroundTask { backgroundContext in
-                    // Get a `User` instance from proper context!!!
-                    let usr = backgroundContext.object(with: user.objectID) as! User
-                    usr.avatar = randomUser.avatar
+            }
+        } catch {
+            os_log("%{public}@", error.localizedDescription)
+        }
+    }
 
-                    do {
-                        try backgroundContext.save()
 
-                        DispatchQueue.main.async {
-                            completionHandler()
-                        }
-                    } catch {
-                        os_log("%{public}@", error.localizedDescription)
-                    }
-                }
-            })
+    private func avatar(forCountry country: String) async throws -> Data {
+        let avatarURL = Self.avatarURLBase.appendingPathComponent("?\(country)")
+
+        let (data, response) = try await theURLSession.data(from: avatarURL)
+
+        guard let response = response as? HTTPURLResponse else {
+            throw ServerSideError.nonHTTPResponse
+        }
+
+        guard (200...299).contains(response.statusCode) else {
+            throw ServerSideError.httpServerError(response.statusCode)
+        }
+
+        return data
     }
 
 
@@ -139,49 +150,7 @@ class PersistenceController {
     private static let avatarURLBase = URL(string: "https://source.unsplash.com/featured")!
 
 
-    private func avatarPublisher(with user: RandomUser) -> AnyPublisher<RandomUser, Error> {
-        let url = Self.avatarURLBase.appendingPathComponent("?\(user.address.country)")
-        
-        return theURLSession.dataTaskPublisher(for: url)
-            .tryMap { data, response in
-                guard let response = response as? HTTPURLResponse else {
-                    throw ServerSideError.nonHTTPResponse
-                }
-
-                guard (200...299).contains(response.statusCode) else {
-                    throw ServerSideError.httpServerError(response.statusCode)
-                }
-
-                var usr = user
-                usr.avatar = data
-
-                return usr
-            }
-            .eraseToAnyPublisher()
-    }
-
-
-    private var randomUserPublisher: AnyPublisher<RandomUser, Error> {
-        return theURLSession.dataTaskPublisher(for: Self.randomUserURL)
-            .tryMap { data, response in
-                guard let response = response as? HTTPURLResponse else {
-                    throw ServerSideError.nonHTTPResponse
-                }
-
-                guard (200...299).contains(response.statusCode) else {
-                    throw ServerSideError.httpServerError(response.statusCode)
-                }
-
-                return data
-            }
-            .decode(type: RandomUser.self, decoder: JSONDecoder())
-            .eraseToAnyPublisher()
-    }
-
-
     private let theURLSession: URLSession
-    private var randomUserSubscriber: AnyCancellable?
-    private var updateAvatarSubscriber: AnyCancellable?
 }
 
 
@@ -189,15 +158,6 @@ class PersistenceController {
 
 
 private struct RandomUser: Decodable {
-    init() {
-        firstName = ""
-        lastName = ""
-        username = ""
-        address = Address(country: "")
-        phoneNumber = ""
-        creditCard = CreditCard(number: "28")
-        subscription = Subscription(paymentMethod: "")
-    }
 
     let firstName: String
     let lastName: String
@@ -226,7 +186,7 @@ private struct Address: Decodable {
 }
 
 
-struct CreditCard: Decodable {
+private struct CreditCard: Decodable {
     let number: String
 
     private enum CodingKeys: String, CodingKey {

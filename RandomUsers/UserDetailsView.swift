@@ -19,7 +19,8 @@ struct UserDetailsView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
             Button {
-                PersistenceController.shared.updateAvatar(forUser: user) {
+                async {
+                    await PersistenceController.shared.updateAvatar(forUser: user)
                     self.image = user.avatarImage
                 }
             } label: {

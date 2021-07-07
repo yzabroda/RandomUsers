@@ -50,7 +50,9 @@ struct ContentView: View {
 
     private func addItem() {
         withAnimation {
-            PersistenceController.shared.fetchRandomUser()
+            async {
+                await PersistenceController.shared.fetchRandomUser()
+            }
         }
     }
 
